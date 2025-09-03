@@ -48,6 +48,7 @@ RUN pacman -Sy --noconfirm \
   dbus \
   dbus-glib \
   glib2 \
+  lvm2 \
   shadow && \
   pacman -S --clean --clean && \
   rm -rf /var/cache/pacman/pkg/*
@@ -55,7 +56,7 @@ RUN pacman -Sy --noconfirm \
 RUN echo "$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" > kernel_version.txt && \
     dracut --force --no-hostonly --reproducible --zstd --verbose \
        --kver "$(cat kernel_version.txt)" \
-       --add ostree \
+       --add "ostree lvm dm" \
        --add-drivers "virtio virtio_blk virtio_pci virtio_ring virtio_net virtio_scsi virtio_balloon ahci ata_piix mptspi mptsas sd_mod scsi_mod nvme xfs ext4 btrfs vfat" \
        "/usr/lib/modules/$(cat kernel_version.txt)/initramfs.img" && \
     rm kernel_version.txt
@@ -71,9 +72,10 @@ RUN mkdir -p /boot /sysroot /var/home && \
 # Update useradd default to /var/home instead of /home for User Creation
 RUN sed -i 's|^HOME=.*|HOME=/var/home|' /etc/default/useradd
 
-# Setup a temporary root passwd (changeme) for dev purposes
+# Setup a temporary root passwd (changeme) for dev purposes and unlock account
 # TODO: Replace this for a more robust option when in prod
 RUN usermod -p '$6$AJv9RHlhEXO6Gpul$5fvVTZXeM0vC03xckTIjY8rdCofnkKSzvF5vEzXDKAby5p3qaOGTHDypVVxKsCE3CbZz7C3NXnbpITrEUvN/Y/' root && \
+    usermod -U root && \
     rm -rf /packages
 
 COPY files/ostree/prepare-root.conf /usr/lib/ostree/prepare-root.conf
