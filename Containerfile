@@ -53,7 +53,11 @@ RUN pacman -Sy --noconfirm \
   rm -rf /var/cache/pacman/pkg/*
 
 RUN echo "$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" > kernel_version.txt && \
-    dracut --force --no-hostonly --reproducible --zstd --verbose --kver "$(cat kernel_version.txt)" --add ostree "/usr/lib/modules/$(cat kernel_version.txt)/initramfs.img" && \
+    dracut --force --no-hostonly --reproducible --zstd --verbose \
+       --kver "$(cat kernel_version.txt)" \
+       --add ostree \
+       --add-drivers "virtio virtio_blk virtio_pci virtio_ring virtio_net virtio_scsi virtio_balloon ahci ata_piix mptspi mptsas sd_mod scsi_mod nvme xfs ext4 btrfs vfat" \
+       "/usr/lib/modules/$(cat kernel_version.txt)/initramfs.img" && \
     rm kernel_version.txt
 
 # Alter root file structure a bit for ostree
