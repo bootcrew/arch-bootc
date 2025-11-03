@@ -17,7 +17,3 @@ just generate-bootable-image # Generates a bootable image for you using bootc!
 ```
 
 Then you can run the `bootable.img` as your boot disk in your preferred hypervisor.
-
-# Fixes
-
-- `mount /dev/vda2 /sysroot/boot` - You need this to get `bootc status` and other stuff working (`/dev/vda2` is your ESP)
