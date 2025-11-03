@@ -16,7 +16,7 @@ on:
 env:
   IMAGE_DESC: "Experimental arch-bootc POC image"
   IMAGE_KEYWORDS: "bootc,archlinux,arch"
-  IMAGE_LOGO_URL: "https://avatars.githubusercontent.com/u/4673648?s=200&v=4"
+  IMAGE_LOGO_URL: "https://avatars.githubusercontent.com/u/230667510?s=400&u=cb912a5db49aee164a609a0fb4967d2d8170feb9&v=4"
   IMAGE_NAME: "${{ github.event.repository.name }}"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
   DEFAULT_TAG: "latest"
