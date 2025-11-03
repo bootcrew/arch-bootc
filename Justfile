@@ -14,6 +14,7 @@ bootc *ARGS:
         -v /etc/containers:/etc/containers:Z \
         -v /var/lib/containers:/var/lib/containers:Z \
         -v /dev:/dev \
+        -e RUST_LOG=debug \
         -v "{{base_dir}}:/data" \
         --security-opt label=type:unconfined_t \
         "{{image_name}}:{{image_tag}}" bootc {{ARGS}}
@@ -23,4 +24,4 @@ generate-bootable-image $base_dir=base_dir $filesystem=filesystem:
     if [ ! -e "${base_dir}/bootable.img" ] ; then
         fallocate -l 20G "${base_dir}/bootable.img"
     fi
-    just bootc install to-disk --composefs-native --via-loopback /data/bootable.img --filesystem "${filesystem}" --wipe --bootloader systemd
+    just bootc install to-disk --composefs-backend --via-loopback /data/bootable.img --filesystem "${filesystem}" --wipe --bootloader systemd

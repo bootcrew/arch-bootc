@@ -1,6 +1,6 @@
 FROM docker.io/archlinux/archlinux:latest AS builder
 
-ENV DEV_DEPS="base-devel git rust whois"
+ENV DEV_DEPS="base-devel git rust"
 
 ENV DRACUT_NO_XATTR=1
 RUN pacman -Syyuu --noconfirm \
@@ -27,17 +27,10 @@ RUN pacman -Syyuu --noconfirm \
 RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     git clone https://github.com/bootc-dev/bootc.git /tmp/bootc && \
     cd /tmp/bootc && \
-    CARGO_FEATURES="composefs-backend" make bin && \
-    make install-all && \
-    make install-initramfs-dracut && \
-    git clone https://github.com/p5/coreos-bootupd.git -b sdboot-support /tmp/bootupd && \
-    cd /tmp/bootupd && \
-    cargo build --release --bins --features systemd-boot && \
-    make install
+    make bin install-all install-initramfs-dracut
 
 # Setup a temporary root passwd (changeme) for dev purposes
-# TODO: Replace this for a more robust option when in prod
-RUN usermod -p "$(echo "changeme" | mkpasswd -s)" root
+# RUN usermod -p "$(echo "changeme" | mkpasswd -s)" root
 
 RUN pacman -Rns --noconfirm ${DEV_DEPS}
 
