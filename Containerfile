@@ -21,7 +21,7 @@ RUN pacman -Syyuu --noconfirm \
       ostree \
       shadow \
       ${DEV_DEPS} && \
-  pacman -S --clean && \
+  pacman -S --clean --noconfirm && \
   rm -rf /var/cache/pacman/pkg/*
 
 RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
