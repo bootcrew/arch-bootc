@@ -1,5 +1,7 @@
 FROM docker.io/archlinux/archlinux:latest
 
+RUN echo -e "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = *\n\n[Action]\nDescription = Cleaning up package cache...\nDepends = coreutils\nWhen = PostTransaction\nExec = /usr/bin/rm -rf /var/cache/pacman/pkg\n" | tee /usr/share/libalpm/hooks/package-cleanup.hook
+
 RUN pacman -Sy --noconfirm \
       base \
       dracut \
@@ -15,9 +17,8 @@ RUN pacman -Sy --noconfirm \
       dbus-glib \
       glib2 \
       ostree \
-      shadow && \
-  pacman -S --clean --noconfirm && \
-  rm -rf /var/cache/pacman/pkg/*
+      shadow \
+      ${DEV_DEPS}
 
 # Regression with newer dracut broke this
 RUN mkdir -p /etc/dracut.conf.d && \
@@ -29,8 +30,7 @@ RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     make -C /tmp/bootc bin install-all install-initramfs-dracut && \
     sh -c 'export KERNEL_VERSION="$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" && \
     dracut --force --no-hostonly --reproducible --zstd --verbose --kver "$KERNEL_VERSION"  "/usr/lib/modules/$KERNEL_VERSION/initramfs.img"' && \
-    pacman -Rns --noconfirm base-devel git rust && \
-    pacman -S --clean --noconfirm
+    pacman -Rns --noconfirm base-devel git rust
 
 # Necessary for general behavior expected by image-based systems
 RUN sed -i 's|^HOME=.*|HOME=/var/home|' "/etc/default/useradd" && \
