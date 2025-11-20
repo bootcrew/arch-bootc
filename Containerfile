@@ -23,6 +23,9 @@ RUN pacman -Sy --noconfirm \
 RUN mkdir -p /etc/dracut.conf.d && \
     printf "systemdsystemconfdir=/etc/systemd/system\nsystemdsystemunitdir=/usr/lib/systemd/system\n" | tee /etc/dracut.conf.d/fix-bootc.conf
 
+# Build ostree & bootc into the initramfs
+RUN printf 'hostonly=no\nadd_dracutmodules+=" ostree bootc "' | tee /etc/dracut.conf.d/10-bootc-base.conf
+
 RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     pacman -S --noconfirm base-devel git rust && \
     git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \
