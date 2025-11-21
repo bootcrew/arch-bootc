@@ -1,4 +1,4 @@
-FROM docker.io/archlinux/archlinux:latest
+FROM docker.io/cachyos/cachyos-v3:latest
 
 RUN pacman -Sy --noconfirm \
       base \
