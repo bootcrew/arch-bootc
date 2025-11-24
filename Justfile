@@ -1,13 +1,30 @@
 image_name := env("BUILD_IMAGE_NAME", "arch-bootc")
 image_tag := env("BUILD_IMAGE_TAG", "latest")
-base_dir := env("BUILD_BASE_DIR", ".")
+base_dir := env("BUILD_BASE_DIR", "/tmp")
 filesystem := env("BUILD_FILESYSTEM", "ext4")
 
-build-containerfile $image_name=image_name:
-    sudo podman build -t "${image_name}:latest" .
+# variant can be either "ostree" or "composefs-sealeduki"
+# "ostree" here just means the image is "unsealed" and just gets tagged
+variant := env("BUILD_VARIANT", "ostree")
+
+namespace := env("BUILD_NAMESPACE", "bootcrew")
+sudo := env("BUILD_ELEVATE", "sudo")
+just_exe := just_executable()
+
+build-containerfile $image_name=image_name $variant=variant:
+    #!/usr/bin/env bash
+    set -xeuo pipefail
+
+    {{sudo}} podman build -t "localhost/${image_name}_unsealed" .
+    # TODO: we can make this a CLI program with better UX: https://github.com/bootc-dev/bootc/issues/1498
+    {{sudo}} ./build-sealed "${variant}" "localhost/${image_name}_unsealed" "${image_name}" "keys"
+
+
+fix-var-containers-selinux:
+     {{sudo}} restorecon -RFv /var/lib/containers/storage
 
 bootc *ARGS:
-    sudo podman run \
+    {{sudo}} podman run \
         --rm --privileged --pid=host \
         -it \
         -v /sys/fs/selinux:/sys/fs/selinux \
@@ -19,9 +36,17 @@ bootc *ARGS:
         --security-opt label=type:unconfined_t \
         "{{image_name}}:{{image_tag}}" bootc {{ARGS}}
 
+
+# installs on a physical target device
+install-image $target_device $filesystem=filesystem:
+    #!/usr/bin/env bash
+    set -xeuo pipefail
+    {{just_exe}} bootc install to-disk --composefs-backend --filesystem "${filesystem}" --wipe --bootloader systemd {{target_device}}
+
+# installs onto an img file for testing in a VM
 generate-bootable-image $base_dir=base_dir $filesystem=filesystem:
     #!/usr/bin/env bash
     if [ ! -e "${base_dir}/bootable.img" ] ; then
         fallocate -l 20G "${base_dir}/bootable.img"
     fi
-    just bootc install to-disk --composefs-backend --via-loopback /data/bootable.img --filesystem "${filesystem}" --wipe --bootloader systemd
+    {{just_exe}} bootc install to-disk --composefs-backend --via-loopback /data/bootable.img --filesystem "${filesystem}" --wipe --bootloader systemd

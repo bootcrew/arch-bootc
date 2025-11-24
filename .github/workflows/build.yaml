@@ -46,6 +46,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
+      - name: Fetch Secboot key
+        env:
+          DB_CRT: ${{ secrets.DB_CRT }}
+          DB_KEY: ${{ secrets.DB_KEY }}
+        run: |
+          echo "Adding signing key from gha to db.crt"
+          echo "$DB_CRT" > keys/db.crt
+          echo "$DB_KEY" > keys/db.key
+
       - name: Get current date
         id: date
         run: |
@@ -86,14 +95,24 @@ jobs:
 
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
-        with:
-          containerfiles: |
-            ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          oci: true
+        shell: bash
+        run: |
+          BUILD_ELEVATE="" just build-containerfile "$IMAGE_NAME"
+
+      - name: Tag Image
+        id: tag
+        env:
+          TAGS: ${{ steps.metadata.outputs.tags }}
+          LABELS: ${{ steps.metadata.outputs.labels }}
+        shell: bash
+        run: |
+          set -xeuo pipefail
+          split=$(echo $TAGS | tr " " "\n")
+          for tag in $split
+          do
+            podman tag "$IMAGE_NAME" "$IMAGE_NAME:$tag"
+          done
+
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
