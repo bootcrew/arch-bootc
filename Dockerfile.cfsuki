@@ -1,66 +1,80 @@
-#!/bin/bash
-set -euo pipefail
-# This should turn into https://github.com/bootc-dev/bootc/issues/1498
+# from: https://github.com/bootc-dev/bootc/blob/main/Dockerfile.cfsuki
 
-variant=$1
-shift
-# The un-sealed container image we want to use
-input_image=$1
-shift
-# The output container image
-output_image=$1
-shift
-# Optional directory with secure boot keys; if none are provided, then we'll
-# generate some under target/
-secureboot=${1:-}
+# Override via --build-arg=base=<image> to use a different base
+ARG base=ghcr.io/bootcrew/arch-bootc:latest
+# This is where we get the tools to build the UKI
+ARG buildroot=docker.io/archlinux/archlinux:latest
+FROM $base AS base
 
-runv() {
-  set -x
-  "$@"
-}
+FROM $buildroot as buildroot-base
+RUN \
+# systemd-udev is required for /usr/lib/systemd/systemd-measure which
+# is used by ukify as invoked with the `--measure` flag below.  Not
+# strictly required, but nice to have the measured PCR values in the
+# output.
+# rm /var/lib/pacman/db.lck && \
+pacman -Sy --noconfirm systemd-ukify pesign openssl systemd-sysvcompat systemd && \
+pacman -S --clean --noconfirm
 
-case $variant in
-  ostree)
-    # Nothing to do
-    echo "Not building a sealed image; forwarding tag"
-    runv podman tag $input_image $output_image
-    exit 0
-    ;;
-  composefs-sealeduki*)
-    ;;
-  *) 
-    echo "Unknown variant=$variant" 1>&2; exit 1
-    ;;
-esac
+FROM buildroot-base as kernel
+# Must be passed
+ARG COMPOSEFS_FSVERITY
 
+RUN --mount=type=secret,id=key \
+    --mount=type=secret,id=cert \
+    --mount=type=bind,from=base,target=/target \
+    # Should be generated externally
+    test -n "${COMPOSEFS_FSVERITY}" && \
+    # Inject the composefs kernel argument and specify a root with the x86_64 DPS UUID.
+    # TODO: Discoverable partition fleshed out, or drop root UUID as systemd-stub extension
+    # TODO: https://github.com/containers/composefs-rs/issues/183
+    cmdline="composefs=${COMPOSEFS_FSVERITY} console=ttyS0,115200n8 root=gpt-auto enforcing=0 rw" && \
+    # pesign uses NSS database so create it from input cert/key
+    mkdir pesign && \
+    certutil -N -d pesign --empty-password && \
+    openssl pkcs12 -export -password 'pass:' -inkey /run/secrets/key -in /run/secrets/cert -out db.p12 && \
+    pk12util -i db.p12 -W '' -d pesign && \
+    subject=$(openssl x509 -in /run/secrets/cert -subject | grep '^subject=CN=' | sed 's/^subject=CN=//') && \
+    kver=$(cd /target/usr/lib/modules && echo *) && \
+    ukify build \
+        --linux "/target/usr/lib/modules/$kver/vmlinuz" \
+        --initrd "/target/usr/lib/modules/$kver/initramfs.img" \
+        --uname="${kver}" \
+        --cmdline "${cmdline}" \
+        --os-release "@/target/usr/lib/os-release" \
+        --signtool pesign \
+        --secureboot-certificate-dir "pesign" \
+        --secureboot-certificate-name "${subject}" \
+        --measure \
+        --json pretty \
+        --output "/boot/$kver.efi" && \
+    # Sign systemd-boot as well
+    sdboot="/usr/lib/systemd/boot/efi/systemd-bootx64.efi" && \
+    pesign \
+        --certdir "pesign" \
+        --certificate "${subject}" \
+        --in "${sdboot}" \
+        --out "${sdboot}.signed" \
+        --sign && \
+    mv "${sdboot}.signed" "${sdboot}"
+# EOF
 
-graphroot=$(podman system info -f '{{.Store.GraphRoot}}')
-echo "Computing composefs digest..."
-cfs_digest=$(podman run --rm --privileged --read-only --security-opt=label=disable -v /sys:/sys:ro --net=none \
-  -v ${graphroot}:/run/host-container-storage:ro --tmpfs /var "$input_image" bootc container compute-composefs-digest)
+FROM base as final
 
-if test -z "${secureboot}"; then
-  secureboot=$(pwd)/keys
-  mkdir -p ${secureboot}
-  cd $secureboot
-  if test '!' -f db.cer; then
-    echo "Generating test Secure Boot keys"
-    systemd-id128 new -u > GUID.txt
+RUN --mount=type=bind,from=kernel,target=/run/kernel  \
+kver=$(cd /usr/lib/modules && echo *) && \
+mkdir -p /boot/EFI/Linux && \
+# We put the UKI in /boot for now due to composefs verity not being the
+# same due to mtime of /usr/lib/modules being changed
+target=/boot/EFI/Linux/$kver.efi && \
+cp /run/kernel/boot/$kver.efi $target && \
+# And remove the defaults
+rm -v /usr/lib/modules/${kver}/{vmlinuz,initramfs.img} && \
+# Symlink into the /usr/lib/modules location
+ln -sr $target /usr/lib/modules/${kver}/$(basename $kver.efi) && \
+bootc container lint # --fatal-warnings, warnings no need to be fatel :))
 
-    openssl req -quiet -newkey rsa:4096 -nodes -keyout PK.key -new -x509 -sha256 -days 3650 -subj '/CN=Test Platform Key/' -out PK.crt
-    openssl x509 -outform DER -in PK.crt -out PK.cer
-
-    openssl req -quiet -newkey rsa:4096 -nodes -keyout KEK.key -new -x509 -sha256 -days 3650 -subj '/CN=Test Key Exchange Key/' -out KEK.crt
-    openssl x509 -outform DER -in KEK.crt -out KEK.cer
-
-    openssl req -quiet -newkey rsa:4096 -nodes -keyout db.key -new -x509 -sha256 -days 3650 -subj '/CN=Test Signature Database key/' -out db.crt
-    openssl x509 -outform DER -in db.crt -out db.cer
-  else 
-    echo "Reusing Secure Boot keys in ${secureboot}"
-  fi
-  cd -
-fi
-
-runv podman build -t $output_image --build-arg=COMPOSEFS_FSVERITY=${cfs_digest} --build-arg=base=${input_image} \
-  --secret=id=key,src=${secureboot}/db.key \
-  --secret=id=cert,src=${secureboot}/db.crt -f Dockerfile.cfsuki .
+FROM base as final-final
+COPY --from=final /boot /boot
+# Override the default
+LABEL containers.bootc=sealed

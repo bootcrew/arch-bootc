@@ -11,6 +11,21 @@ namespace := env("BUILD_NAMESPACE", "bootcrew")
 sudo := env("BUILD_ELEVATE", "sudo")
 just_exe := just_executable()
 
+enroll-secboot-key:
+    #!/usr/bin/bash
+    ENROLLMENT_PASSWORD=""
+    SECUREBOOT_KEY=keys/db.cer
+    "{{sudo}}" mokutil --timeout -1
+    echo -e "$ENROLLMENT_PASSWORD\n$ENROLLMENT_PASSWORD" | "{{sudo}}" mokutil --import "$SECUREBOOT_KEY"
+    echo 'At next reboot, the mokutil UEFI menu UI will be displayed (*QWERTY* keyboard input and navigation).\nThen, select "Enroll MOK", and input "bootcrew" as the password'
+
+gen-secboot-keys:
+    #!/usr/bin/env bash
+    set -xeuo pipefail
+
+    openssl req -quiet -newkey rsa:4096 -nodes -keyout keys/db.key -new -x509 -sha256 -days 3650 -subj '/CN=Arch Bootc Signature Database key/' -out keys/db.crt
+    openssl x509 -outform DER -in keys/db.crt -out keys/db.cer
+
 build-containerfile $image_name=image_name $variant=variant:
     #!/usr/bin/env bash
     set -xeuo pipefail
