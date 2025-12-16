@@ -12,6 +12,7 @@ RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \
     make -C /tmp/bootc bin install-all && \
     printf "systemdsystemconfdir=/etc/systemd/system\nsystemdsystemunitdir=/usr/lib/systemd/system\n" | tee /usr/lib/dracut/dracut.conf.d/30-bootcrew-fix-bootc-module.conf && \
+    printf 'add_dracutmodules+=" fido2 tpm2-tss pkcs11 systemd-pcrphase "\n' | tee "/usr/lib/dracut/dracut.conf.d/20-bootcrew-tpm-luks.conf" && \
     printf 'reproducible=yes\nhostonly=no\ncompress=zstd\nadd_dracutmodules+=" ostree bootc "' | tee "/usr/lib/dracut/dracut.conf.d/30-bootcrew-bootc-container-build.conf" && \
     dracut --force "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)/initramfs.img" && \
     pacman -Rns --noconfirm make git rust go-md2man && \
