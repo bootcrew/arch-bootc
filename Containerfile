@@ -30,4 +30,7 @@ RUN sed -i 's|^HOME=.*|HOME=/var/home|' "/etc/default/useradd" && \
 # RUN pacman -S whois --noconfirm
 # RUN usermod -p "$(echo "changeme" | mkpasswd -s)" root
 
+# https://bootc-dev.github.io/bootc/bootc-images.html#standard-metadata-for-bootc-compatible-images
+LABEL containers.bootc 1
+
 RUN bootc container lint
