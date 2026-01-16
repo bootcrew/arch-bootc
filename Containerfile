@@ -1,5 +1,5 @@
 FROM docker.io/archlinux/archlinux:latest AS builder
-RUN pacman -Syu --noconfirm make git rust go-md2man ostree glibc
+RUN pacman -Syu --noconfirm make git rust go-md2man ostree glibc pkgconf
 WORKDIR /build/bootc
 RUN git clone "https://github.com/bootc-dev/bootc.git" . && \
     make bin install-all DESTDIR=/output
