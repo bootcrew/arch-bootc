@@ -23,7 +23,7 @@ RUN pacman -S --noconfirm \
     ffmpeg ffmpegthumbnailer libcamera libcamera-tools libheif \
     amd-ucode intel-ucode efibootmgr shim mesa libva-intel-driver libva-mesa-driver \
     vpl-gpu-rt vulkan-icd-loader vulkan-intel vulkan-radeon apparmor xf86-video-amdgpu zram-generator \
-    lm_sensors intel-media-driver git bootc openal ttf-twemoji
+    lm_sensors intel-media-driver git bootc openal ttf-twemoji curl
 
 # Fix users and group after rebasing from non-arch image
 RUN mkdir -p /usr/lib/systemd/system-preset /usr/lib/systemd/system
