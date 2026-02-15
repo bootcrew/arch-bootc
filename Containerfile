@@ -18,7 +18,7 @@ RUN pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com && \
 
 RUN pacman -S --noconfirm \
     reflector sudo bash fastfetch nano openssh unzip tar flatpak fuse2 fzf just wl-clipboard \
-    libmtp nss-mdns samba smbclient networkmanager udiskie udisks2 udisks2-btrfs lvm2 cups cups-browsed hplip wireguard-tools \
+    libmtp nss-mdns samba smbclient networkmanager udiskie udisks2 udisks2-btrfs lvm2 cups cups-browsed cups-pdf system-config-printer hplip wireguard-tools \
     dosfstools cryptsetup bluez bluez-utils tuned tuned-ppd distrobox podman squashfs-tools zstd \
     ffmpeg ffmpegthumbnailer libcamera libcamera-tools libheif \
     amd-ucode intel-ucode efibootmgr shim mesa libva-intel-driver libva-mesa-driver \
