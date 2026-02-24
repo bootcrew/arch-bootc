@@ -1,35 +1,51 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:best-practices"
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:best-practices',
   ],
-  "rebaseWhen": "never",
-  "customManagers": [
+  rebaseWhen: 'never',
+  customManagers: [
     {
-      "customType": "regex",
-      "fileMatch": [
-        "(^|/)Containerfile$",
-        "(^|/)Containerfile-cachy$"
+      customType: 'regex',
+      managerFilePatterns: [
+        '/(^|/)Containerfile$/',
+        '/(^|/)Containerfile-cachy$/',
       ],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+ENV VERSION=\"(?<currentValue>.*?)\"\\s+ENV SHASUM=\"(?<currentDigest>.*?)\""
-      ]
-    }
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+ENV VERSION="(?<currentValue>.*?)"\\s+ENV SHASUM="(?<currentDigest>.*?)"',
+      ],
+    },
   ],
-  "packageRules": [
+  packageRules: [
     {
-      "automerge": true,
-      "matchUpdateTypes": ["pin", "pinDigest"]
+      automerge: true,
+      matchUpdateTypes: [
+        'pin',
+        'pinDigest',
+      ],
     },
     {
-      "enabled": false,
-      "matchUpdateTypes": ["digest", "pinDigest", "pin"],
-      "matchDepTypes": ["container"],
-      "matchFileNames": [".github/workflows/**.yaml", ".github/workflows/**.yml"]
+      enabled: false,
+      matchUpdateTypes: [
+        'digest',
+        'pinDigest',
+        'pin',
+      ],
+      matchDepTypes: [
+        'container',
+      ],
+      matchFileNames: [
+        '.github/workflows/**.yaml',
+        '.github/workflows/**.yml',
+      ],
     },
     {
-      "matchPackageNames": ["archlinux-bootstrap"],
-      "schedule": ["before 4am on the first day of the month"]
-    }
-  ]
+      matchPackageNames: [
+        'archlinux-bootstrap',
+      ],
+      schedule: [
+        'before 4am on the first day of the month',
+      ],
+    },
+  ],
 }
