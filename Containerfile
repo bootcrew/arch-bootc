@@ -1,4 +1,27 @@
-FROM docker.io/archlinux/archlinux:latest
+FROM cgr.dev/chainguard/wolfi-base:latest AS rootfs
+
+# renovate: datasource=custom depName=archlinux-bootstrap
+ENV VERSION="2026.02.01"
+ENV SHASUM="5debe75527010999719815ca964b6f630eac525167c6ad00ba1f7aa510ba657a"
+
+RUN apk add gnutar zstd curl && \
+    curl -fLOJ --retry 3 https://fastly.mirror.pkgbuild.com/iso/$VERSION/archlinux-bootstrap-x86_64.tar.zst && \
+    echo "$SHASUM archlinux-bootstrap-x86_64.tar.zst" > sha256sum.txt && \
+    sha256sum -c sha256sum.txt || exit 1 && \
+    tar -xf /archlinux-bootstrap-x86_64.tar.zst --numeric-owner && \
+    rm -f /archlinux-bootstrap-x86_64.tar.zst && \
+    apk del gnutar zstd curl && \
+    apk cache clean
+
+# Actual system build
+FROM scratch AS system
+COPY --from=rootfs /root.x86_64/ /
+
+RUN sed -i 's/^#VerbosePkgLists/VerbosePkgLists/' /etc/pacman.conf
+RUN sed -i 's/^#DisableSandbox/DisableSandbox/' /etc/pacman.conf
+RUN sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
+RUN pacman-key --init
+RUN pacman-key --populate archlinux
 RUN pacman -Syu --noconfirm
 
 # Move everything from `/var` to `/usr/lib/sysimage` so behavior around pacman remains the same on `bootc usroverlay`'d systems
