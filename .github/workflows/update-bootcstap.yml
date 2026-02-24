@@ -1,0 +1,37 @@
+name: Update Arch Bootstrap
+on:
+  schedule:
+    - cron: '0 4 1 * *' 
+  workflow_dispatch:
+
+jobs:
+  update-bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Latest Version and SHA
+        run: |
+          VERSION=$(curl -s https://archive.archlinux.org/iso/ | grep -oE '[0-9]{4}\.[0-9]{2}\.[0-9]{2}' | tail -n 1)
+          SHASUM=$(curl -s "https://archive.archlinux.org/iso/$VERSION/sha256sums.txt" | grep "archlinux-bootstrap-x86_64.tar.zst" | awk '{print $1}')
+          
+          echo "NEW_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "NEW_SHASUM=$SHASUM" >> $GITHUB_ENV
+
+      - name: Update Containerfile
+        run: |
+          sed -i "s/ENV VERSION=.*/ENV VERSION=\"${{ env.NEW_VERSION }}\"/" Containerfile
+          sed -i "s/ENV SHASUM=.*/ENV SHASUM=\"${{ env.NEW_SHASUM }}\"/" Containerfile
+          if [ -f Containerfile-cachy ]; then
+            sed -i "s/ENV VERSION=.*/ENV VERSION=\"${{ env.NEW_VERSION }}\"/" Containerfile-cachy
+            sed -i "s/ENV SHASUM=.*/ENV SHASUM=\"${{ env.NEW_SHASUM }}\"/" Containerfile-cachy
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update arch bootstrap to ${{ env.NEW_VERSION }}"
+          title: "Update Arch Bootstrap to ${{ env.NEW_VERSION }}"
+          body: "Automatically updated Arch Linux bootstrap version and SHASUM."
+          branch: update-arch-bootstrap
