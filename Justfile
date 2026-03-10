@@ -1,7 +1,7 @@
 image_name := env("BUILD_IMAGE_NAME", "ghcr.io/ohaiibuzzle/arch-bootc")
 image_tag := env("BUILD_IMAGE_TAG", "latest")
 base_dir := env("BUILD_BASE_DIR", ".")
-filesystem := env("BUILD_FILESYSTEM", "ext4")
+filesystem := env("BUILD_FILESYSTEM", "btrfs")
 selinux := env("BUILD_SELINUX", "false")
 
 options := if selinux == "true" { "-v /var/lib/containers:/var/lib/containers:Z -v /etc/containers:/etc/containers:Z -v /sys/fs/selinux:/sys/fs/selinux --security-opt label=type:unconfined_t" } else { "-v /var/lib/containers:/var/lib/containers -v /etc/containers:/etc/containers" }

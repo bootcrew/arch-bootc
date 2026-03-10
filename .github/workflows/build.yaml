@@ -93,10 +93,17 @@ jobs:
         with:
           containerfiles: |
             ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
+          tags: "raw-img"
           oci: true
+
+      - name: Run Rechunker
+        id: rechunk
+        uses: ublue-os/legacy-rechunk@a925083d9af7cb04b3e2a6e8c01bfa495f38b710 # v1.0.0
+        with:
+          rechunk: "ghcr.io/ublue-os/legacy-rechunk:v1.0.0-x86_64"
+          ref: "raw-img"
+          version: "${{ steps.metadata.outputs.tags }}"
+          labels: ${{ steps.metadata.outputs.labels }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
